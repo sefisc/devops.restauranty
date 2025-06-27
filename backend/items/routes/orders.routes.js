@@ -3,8 +3,6 @@ const router = express.Router();
 
 const Order = require('../models/Order.model')
 
-// const fileUploader = require('./../config/cloudinary.config')
-
 router.get("/", (req, res) => {
 
     Order.find().then(orders => {

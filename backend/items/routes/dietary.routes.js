@@ -3,7 +3,7 @@ const router = express.Router();
 
 const Dietary = require('../models/dietary.model')
 
-const fileUploader = require('../config/cloudinary.config')
+const { upload, uploadToAzureBlob } = require('../config/azure.config');
 
 router.get("/", (req, res) => {
 
@@ -27,29 +27,28 @@ router.get("/:id", (req, res) => {
 
 })
 
-router.post("/", fileUploader.single("imagem"), (req, res) => {
+router.post("/", upload.single("imagem"), async (req, res) => {
+    try {
+        // 1) start with everything sent in the body
+        const dietaryData = { ...req.body };
 
-    const dietary = req.body
+        // 2) if a file was uploaded, push its Azure URL onto dietaryData.image
+        if (req.file) {
+            const imageUrl = await uploadToAzureBlob(req.file);
+            dietaryData.image = [imageUrl];
+        }
 
-    console.log(dietary)
-    console.log(5)
+        // 3) create the new Dietary document
+        const newDietary = await Dietary.create(dietaryData);
 
-    Dietary.create(dietary)
-        .then(newDietary => {
-            console.log(newDietary)
-            let id = newDietary._id;
-            return Dietary.findByIdAndUpdate(
-                id,
-            );
-        })
-        .then(updatedItem => {
-            res.json(updatedItem);
-        })
-        .catch(err => {
-            res.status(400).json(err);
-        });
+        // 4) respond with the freshly created doc
+        res.status(201).json(newDietary);
 
-})
+    } catch (err) {
+        console.error("Failed to create Dietary:", err);
+        res.status(400).json({ error: err.message });
+    }
+});
 
 router.put("/:id", (req, res) => {
 

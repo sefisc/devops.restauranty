@@ -3,8 +3,7 @@ const router = express.Router();
 
 const Item = require('../models/Item.model')
 
-
-const fileUploader = require('../config/cloudinary.config')
+const { upload, uploadToAzureBlob } = require('../config/azure.config');
 
 router.get("/", (req, res) => {
 
@@ -28,46 +27,38 @@ router.get("/:id", (req, res) => {
 
 })
 
-router.post("/", fileUploader.single("imagem"), (req, res) => {
+router.post("/", upload.single("imagem"), async (req, res) => {
+    try {
+        const itemData = req.body;
+        let imageUrl = "";
 
-    const item = req.body
+        if (req.file) {
+            imageUrl = await uploadToAzureBlob(req.file);
+            itemData.image = [imageUrl];
+        }
 
-    const data = req.file.path
-
-    Item.create(item)
-        .then(newItem => {
-            let id = newItem._id;
-            return Item.findByIdAndUpdate(
-                id,
-                { $push: { image: data } }
-            );
-        })
-        .then(updatedItem => {
-            res.json(updatedItem);
-        })
-        .catch(err => {
-            res.status(400).json(err);
-        });
-
-})
-
-router.put("/:id", fileUploader.single("imagem"), (req, res) => {
-    const itemId = req.params.id;
-    const item = req.body;
-
-    if (req.file) {
-        // New file is uploaded, process and update the image URL
-        const imagePath = req.file.path;
-        item.image = [imagePath]; // Assign the updated image path to the image array
+        const newItem = await Item.create(itemData);
+        res.json(newItem);
+    } catch (err) {
+        res.status(400).json(err);
     }
+});
 
-    Item.findByIdAndUpdate(itemId, item, { new: true })
-        .then(updatedItem => {
-            res.json(updatedItem);
-        })
-        .catch(err => {
-            res.status(400).json(err);
-        });
+
+router.put("/:id", upload.single("imagem"), async (req, res) => {
+    try {
+        const itemData = req.body;
+
+        if (req.file) {
+            const imageUrl = await uploadToAzureBlob(req.file);
+            itemData.image = [imageUrl];
+        }
+
+        const updatedItem = await Item.findByIdAndUpdate(req.params.id, itemData, { new: true });
+        res.json(updatedItem);
+    } catch (err) {
+        res.status(400).json(err);
+    }
 });
 
 
