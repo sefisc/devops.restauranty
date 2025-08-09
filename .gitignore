@@ -1,9 +1,14 @@
+# Node modules
 client/node_modules
 mobile/node_modules
 server/node_modules
-client/.env
-mobile/.env
-server/.env
-backend/*/.env
 backend/*/node_modules
+
+# Ignore all .env files globally
+**/.env
+
+# Do NOT ignore .env.example files (keep these tracked)
+!.env.example
+
+# Expo cache
 mobile/.expo
