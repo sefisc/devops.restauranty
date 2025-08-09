@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
   auth:
-    container_name: auth
     build: ./backend/auth
+    container_name: auth
     ports:
       - "${AUTH_PORT}:3001"
     env_file:
@@ -11,14 +11,16 @@ services:
     environment:
       - PORT=3001
       - SECRET=${SECRET}
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb://mongodb:27017/flor
       - CLOUD_NAME=${CLOUD_NAME}
       - CLOUD_API_KEY=${CLOUD_API_KEY}
       - CLOUD_API_SECRET=${CLOUD_API_SECRET}
+    depends_on:
+      - mongodb
 
   discounts:
-    container_name: discounts
     build: ./backend/discounts
+    container_name: discounts
     ports:
       - "${DISCOUNTS_PORT}:3002"
     env_file:
@@ -26,14 +28,16 @@ services:
     environment:
       - PORT=3002
       - SECRET=${SECRET}
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb://mongodb:27017/flor
       - CLOUD_NAME=${CLOUD_NAME}
       - CLOUD_API_KEY=${CLOUD_API_KEY}
       - CLOUD_API_SECRET=${CLOUD_API_SECRET}
+    depends_on:
+      - mongodb
 
   items:
-    container_name: items
     build: ./backend/items
+    container_name: items
     ports:
       - "${ITEMS_PORT}:3003"
     env_file:
@@ -41,23 +45,27 @@ services:
     environment:
       - PORT=3003
       - SECRET=${SECRET}
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb://mongodb:27017/flor
       - CLOUD_NAME=${CLOUD_NAME}
       - CLOUD_API_KEY=${CLOUD_API_KEY}
       - CLOUD_API_SECRET=${CLOUD_API_SECRET}
+    depends_on:
+      - mongodb
 
   frontend:
-    container_name: frontend
     build:
       context: ./client
       args:
-        REACT_APP_API_URL: http://34.220.9.168  # change to your actual API URL
+        REACT_APP_SERVER_URL: ${REACT_APP_SERVER_URL}   # <-- Pass build arg here
+    container_name: frontend
     ports:
       - "${FRONTEND_PORT}:80"
+    env_file:
+      - .env
 
   haproxy:
-    container_name: haproxy
     image: haproxy:latest
+    container_name: haproxy
     ports:
       - "80:80"
     volumes:
@@ -67,3 +75,16 @@ services:
       - discounts
       - items
       - frontend
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"  # Optional
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: flor
+
+volumes:
+  mongo_data:
