@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: restauranty-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: sebsrestaurant.diogohack.shop
+    http:
+      paths:
+      - pathType: Prefix
+        path: /api/auth(/|$)(.*)
+        backend:
+          service:
+            name: auth
+            port:
+              number: 3001
+      - pathType: Prefix
+        path: /api/items(/|$)(.*)
+        backend:
+          service:
+            name: items
+            port:
+              number: 3003
+      - pathType: Prefix
+        path: /api/discounts(/|$)(.*)
+        backend:
+          service:
+            name: discounts
+            port:
+              number: 3002
+      - pathType: Prefix
+        path: /(.*)
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 3000

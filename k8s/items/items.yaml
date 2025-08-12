@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: items
+  namespace: restauranty
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: items
+  template:
+    metadata:
+      labels:
+        app: items
+        role: backend
+    spec:
+      nodeSelector:
+        role: backend
+      containers:
+      - name: items
+        image: sfischer46/restauranty-items:v1
+        ports:
+        - containerPort: 3003
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://mongodb:27017/flor"
+        - name: AUTH_SERVICE_URL
+          value: "http://auth:3001"
+        - name: DISCOUNTS_SERVICE_URL
+          value: "http://discounts:3002"
+        - name: ITEMS_SERVICE_URL
+          value: "http://items:3003"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: items
+  namespace: restauranty
+spec:
+  selector:
+    app: items
+  ports:
+  - port: 3003
+    targetPort: 3003
+    protocol: TCP
+  type: ClusterIP
