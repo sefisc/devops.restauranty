@@ -1,0 +1,42 @@
+---
+- name: Deploy Restauranty stack
+  hosts: localhost
+  connection: local
+  vars:
+    namespace: restauranty
+  tasks:
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ namespace }}"
+
+    - name: Create restauranty-env secret
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: restauranty-env
+            namespace: "{{ namespace }}"
+          type: Opaque
+          stringData:
+            MONGO_INITDB_ROOT_USERNAME: "{{ lookup('env','MONGO_USERNAME') }}"
+            MONGO_INITDB_ROOT_PASSWORD: "{{ lookup('env','MONGO_PASSWORD') }}"
+            SECRET: "{{ lookup('env','SECRET') }}"
+            CLOUD_NAME: "{{ lookup('env','CLOUD_NAME') }}"
+            CLOUD_API_KEY: "{{ lookup('env','CLOUD_API_KEY') }}"
+            CLOUD_API_SECRET: "{{ lookup('env','CLOUD_API_SECRET') }}"
+            REACT_APP_SERVER_URL: "{{ lookup('env','REACT_APP_SERVER_URL') }}"
+
+    - name: Apply all Kubernetes manifests
+      kubernetes.core.k8s:
+        state: present
+        kubeconfig: "~/.kube/config"
+        namespace: "{{ namespace }}"
+        src: "../k8s-manifests/"

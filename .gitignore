@@ -12,3 +12,4 @@ backend/*/node_modules
 
 # Expo cache
 mobile/.expo
+.secrets/
