@@ -70,11 +70,13 @@ jobs:
       # Deploy to EKS
       - name: Deploy to EKS
         run: |
-          # Update image tags in deployments (using correct deployment and container names)
+          # Update image tags for backend services
           kubectl set image deployment/auth auth=$DOCKERHUB_USERNAME/restauranty-auth:latest -n restauranty
           kubectl set image deployment/items items=$DOCKERHUB_USERNAME/restauranty-items:latest -n restauranty
           kubectl set image deployment/discounts discounts=$DOCKERHUB_USERNAME/restauranty-discounts:latest -n restauranty
-          kubectl set image deployment/frontend html-provider=$DOCKERHUB_USERNAME/restauranty-frontend:latest -n restauranty
+          
+          # Update frontend initContainer image (copy-static is the initContainer name)
+          kubectl patch deployment frontend -n restauranty -p '{"spec":{"template":{"spec":{"initContainers":[{"name":"copy-static","image":"'$DOCKERHUB_USERNAME'/restauranty-frontend:latest"}]}}}}'
           
           # Wait for rollout to complete
           kubectl rollout status deployment/auth -n restauranty
