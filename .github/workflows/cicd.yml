@@ -81,3 +81,4 @@ jobs:
           kubectl rollout status deployment/items-deployment -n restauranty
           kubectl rollout status deployment/discounts-deployment -n restauranty
           kubectl rollout status deployment/frontend-deployment -n restauranty
+# Updated CI/CD pipeline for microservices
