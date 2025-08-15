@@ -13,3 +13,37 @@ backend/*/node_modules
 # Expo cache
 mobile/.expo
 .secrets/
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Kubernetes configs
+kubeconfig*
+*kubeconfig*
+
+# Secrets and keys
+*.pem
+*.key
+*.crt
+secrets/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*~
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+build/

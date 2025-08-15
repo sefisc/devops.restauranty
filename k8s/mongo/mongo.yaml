@@ -14,6 +14,15 @@ spec:
         app: mongodb
         role: mongo
     spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - t2.large
       containers:
       - name: mongodb
         image: mongo:latest
@@ -32,11 +41,10 @@ spec:
               key: MONGO_INITDB_ROOT_PASSWORD
         volumeMounts:
         - mountPath: /data/db
-          name: mongo-persistent-storage
+          name: mongo-storage
       volumes:
-      - name: mongo-persistent-storage
-        persistentVolumeClaim:
-          claimName: mongo-pvc
+      - name: mongo-storage
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -51,16 +59,3 @@ spec:
     targetPort: 27017
     protocol: TCP
   type: ClusterIP
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: mongo-pvc
-  namespace: restauranty
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-  storageClassName: gp2

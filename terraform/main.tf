@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 5.95"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -27,7 +27,16 @@ variable "cluster_name" {
   default = "restauranty-eks"
 }
 
-variable "backend_node_type" {
+# Backend service node types
+variable "auth_node_type" {
+  default = "t2.small"
+}
+
+variable "items_node_type" {
+  default = "t2.small"
+}
+
+variable "discounts_node_type" {
   default = "t2.small"
 }
 
@@ -37,18 +46,6 @@ variable "frontend_node_type" {
 
 variable "mongodb_node_type" {
   default = "t2.large"
-}
-
-variable "backend_desired_capacity" {
-  default = 1
-}
-
-variable "frontend_desired_capacity" {
-  default = 1
-}
-
-variable "mongodb_desired_capacity" {
-  default = 1
 }
 
 ########################
@@ -61,7 +58,7 @@ data "aws_availability_zones" "available" {}
 ########################
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "4.0"
+  version = "~> 5.0"
 
   name = "restauranty-vpc"
   cidr = "10.0.0.0/16"
@@ -75,6 +72,17 @@ module "vpc" {
 
   tags = {
     Name = "restauranty-vpc"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+  }
+
+  public_subnet_tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/elb"                    = 1
+  }
+
+  private_subnet_tags = {
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
+    "kubernetes.io/role/internal-elb"           = 1
   }
 }
 
@@ -82,39 +90,148 @@ module "vpc" {
 # EKS Cluster
 ########################
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  version         = "21.0.9"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.27"
-  subnets         = module.vpc.private_subnets
-  vpc_id          = module.vpc.vpc_id
+  cluster_version = "1.31"
 
-  node_groups = {
-    backend = {
-      desired_capacity = var.backend_desired_capacity
-      max_capacity     = 1
-      min_capacity     = 1
-      instance_type    = var.backend_node_type
-      subnet_ids       = module.vpc.private_subnets
+  vpc_id                         = module.vpc.vpc_id
+  subnet_ids                     = module.vpc.private_subnets
+  cluster_endpoint_public_access = true
+
+  eks_managed_node_groups = {
+    # Backend Auth Service - Dedicated node
+    auth = {
+      name = "auth-service"
+      
+      instance_types = [var.auth_node_type]
+      
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
+
+      subnet_ids = module.vpc.private_subnets
+      
+      labels = {
+        service = "auth"
+        tier = "backend"
+      }
+      
+      taints = {
+        auth = {
+          key    = "service"
+          value  = "auth"
+          effect = "NO_SCHEDULE"
+        }
+      }
     }
+    
+    # Backend Items Service - Dedicated node  
+    items = {
+      name = "items-service"
+      
+      instance_types = [var.items_node_type]
+      
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
+
+      subnet_ids = module.vpc.private_subnets
+      
+      labels = {
+        service = "items"
+        tier = "backend"
+      }
+      
+      taints = {
+        items = {
+          key    = "service"
+          value  = "items"
+          effect = "NO_SCHEDULE"
+        }
+      }
+    }
+    
+    # Backend Discounts Service - Dedicated node
+    discounts = {
+      name = "discounts-service"
+      
+      instance_types = [var.discounts_node_type]
+      
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
+
+      subnet_ids = module.vpc.private_subnets
+      
+      labels = {
+        service = "discounts"
+        tier = "backend"
+      }
+      
+      taints = {
+        discounts = {
+          key    = "service"
+          value  = "discounts"
+          effect = "NO_SCHEDULE"
+        }
+      }
+    }
+    
+    # Frontend - Dedicated node
     frontend = {
-      desired_capacity = var.frontend_desired_capacity
-      max_capacity     = 1
-      min_capacity     = 1
-      instance_type    = var.frontend_node_type
-      subnet_ids       = module.vpc.private_subnets
+      name = "frontend"
+      
+      instance_types = [var.frontend_node_type]
+      
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
+
+      subnet_ids = module.vpc.private_subnets
+      
+      labels = {
+        service = "frontend"
+        tier = "frontend"
+      }
+      
+      taints = {
+        frontend = {
+          key    = "service"
+          value  = "frontend"
+          effect = "NO_SCHEDULE"
+        }
+      }
     }
+    
+    # MongoDB - Dedicated node
     mongodb = {
-      desired_capacity = var.mongodb_desired_capacity
-      max_capacity     = 1
-      min_capacity     = 1
-      instance_type    = var.mongodb_node_type
-      subnet_ids       = module.vpc.private_subnets
+      name = "mongodb"
+      
+      instance_types = [var.mongodb_node_type]
+      
+      min_size     = 1
+      max_size     = 1
+      desired_size = 1
+
+      subnet_ids = module.vpc.private_subnets
+      
+      labels = {
+        service = "mongodb"
+        tier = "database"
+      }
+      
+      taints = {
+        mongodb = {
+          key    = "service"
+          value  = "mongodb"
+          effect = "NO_SCHEDULE"
+        }
+      }
     }
   }
 
-  manage_aws_auth = true
   tags = {
     Environment = "production"
     Project     = "restauranty"
@@ -125,48 +242,71 @@ module "eks" {
 # Kubernetes Provider
 ########################
 data "aws_eks_cluster_auth" "auth" {
-  name = module.eks.cluster_id
+  name = module.eks.cluster_name
 }
 
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
-  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority[0].data)
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
   token                  = data.aws_eks_cluster_auth.auth.token
-}
-
-########################
-# Local kubeconfig
-########################
-locals {
-  kubeconfig = <<EOT
-apiVersion: v1
-clusters:
-- cluster:
-    server: ${module.eks.cluster_endpoint}
-    certificate-authority-data: ${module.eks.cluster_certificate_authority[0].data}
-  name: ${var.cluster_name}
-contexts:
-- context:
-    cluster: ${var.cluster_name}
-    user: aws
-  name: ${var.cluster_name}
-current-context: ${var.cluster_name}
-kind: Config
-preferences: {}
-users:
-- name: aws
-  user:
-    token: ${data.aws_eks_cluster_auth.auth.token}
-EOT
 }
 
 ########################
 # Outputs
 ########################
 output "cluster_endpoint" {
-  value = module.eks.cluster_endpoint
+  description = "Endpoint for EKS control plane"
+  value       = module.eks.cluster_endpoint
 }
 
-output "kubeconfig" {
-  value = local.kubeconfig
+output "cluster_name" {
+  description = "Kubernetes Cluster Name"
+  value       = module.eks.cluster_name
+}
+
+output "cluster_security_group_id" {
+  description = "Security group ids attached to the cluster control plane"
+  value       = module.eks.cluster_security_group_id
+}
+
+output "kubectl_config" {
+  description = "kubectl config as generated by the module"
+  value = templatefile("${path.module}/kubeconfig_template.yaml", {
+    cluster_name = module.eks.cluster_name,
+    endpoint = module.eks.cluster_endpoint,
+    ca_data = module.eks.cluster_certificate_authority_data,
+    region = var.aws_region
+  })
+  sensitive = true
+}
+
+output "region" {
+  description = "AWS region"
+  value       = var.aws_region
+}
+
+output "node_groups_info" {
+  description = "Information about the node groups for service deployment"
+  value = {
+    auth = {
+      node_selector = "service=auth"
+      toleration = "service=auth:NoSchedule"
+    }
+    items = {
+      node_selector = "service=items" 
+      toleration = "service=items:NoSchedule"
+    }
+    discounts = {
+      node_selector = "service=discounts"
+      toleration = "service=discounts:NoSchedule"
+    }
+    frontend = {
+      node_selector = "service=frontend"
+      toleration = "service=frontend:NoSchedule"
+    }
+    mongodb = {
+      node_selector = "service=mongodb"
+      toleration = "service=mongodb:NoSchedule"
+    }
+  }
 }
