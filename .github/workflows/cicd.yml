@@ -35,11 +35,23 @@ jobs:
           username: ${{ env.DOCKERHUB_USERNAME }}
           password: ${{ env.DOCKERHUB_TOKEN }}
 
-      # Build & push backend image
-      - name: Build and push backend Docker image
+      # Build & push auth service image
+      - name: Build and push auth service Docker image
         run: |
-          docker build -t $DOCKERHUB_USERNAME/restauranty-backend:latest ./backend
-          docker push $DOCKERHUB_USERNAME/restauranty-backend:latest
+          docker build -t $DOCKERHUB_USERNAME/restauranty-auth:latest ./backend/auth
+          docker push $DOCKERHUB_USERNAME/restauranty-auth:latest
+
+      # Build & push items service image
+      - name: Build and push items service Docker image
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/restauranty-items:latest ./backend/items
+          docker push $DOCKERHUB_USERNAME/restauranty-items:latest
+
+      # Build & push discounts service image
+      - name: Build and push discounts service Docker image
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/restauranty-discounts:latest ./backend/discounts
+          docker push $DOCKERHUB_USERNAME/restauranty-discounts:latest
 
       # Build & push frontend image
       - name: Build and push frontend Docker image
@@ -52,12 +64,20 @@ jobs:
       # Set up kubeconfig from base64 secret
       - name: Set up kubeconfig
         run: |
+          mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
 
       # Deploy to EKS
       - name: Deploy to EKS
         run: |
-          kubectl set image deployment/backend-deployment backend=$DOCKERHUB_USERNAME/restauranty-backend:latest -n restauranty
+          # Update image tags in deployments
+          kubectl set image deployment/auth-deployment auth=$DOCKERHUB_USERNAME/restauranty-auth:latest -n restauranty
+          kubectl set image deployment/items-deployment items=$DOCKERHUB_USERNAME/restauranty-items:latest -n restauranty
+          kubectl set image deployment/discounts-deployment discounts=$DOCKERHUB_USERNAME/restauranty-discounts:latest -n restauranty
           kubectl set image deployment/frontend-deployment frontend=$DOCKERHUB_USERNAME/restauranty-frontend:latest -n restauranty
-          kubectl rollout status deployment/backend-deployment -n restauranty
+          
+          # Wait for rollout to complete
+          kubectl rollout status deployment/auth-deployment -n restauranty
+          kubectl rollout status deployment/items-deployment -n restauranty
+          kubectl rollout status deployment/discounts-deployment -n restauranty
           kubectl rollout status deployment/frontend-deployment -n restauranty
