@@ -70,15 +70,14 @@ jobs:
       # Deploy to EKS
       - name: Deploy to EKS
         run: |
-          # Update image tags in deployments
-          kubectl set image deployment/auth-deployment auth=$DOCKERHUB_USERNAME/restauranty-auth:latest -n restauranty
-          kubectl set image deployment/items-deployment items=$DOCKERHUB_USERNAME/restauranty-items:latest -n restauranty
-          kubectl set image deployment/discounts-deployment discounts=$DOCKERHUB_USERNAME/restauranty-discounts:latest -n restauranty
-          kubectl set image deployment/frontend-deployment frontend=$DOCKERHUB_USERNAME/restauranty-frontend:latest -n restauranty
+          # Update image tags in deployments (using correct deployment and container names)
+          kubectl set image deployment/auth auth=$DOCKERHUB_USERNAME/restauranty-auth:latest -n restauranty
+          kubectl set image deployment/items items=$DOCKERHUB_USERNAME/restauranty-items:latest -n restauranty
+          kubectl set image deployment/discounts discounts=$DOCKERHUB_USERNAME/restauranty-discounts:latest -n restauranty
+          kubectl set image deployment/frontend html-provider=$DOCKERHUB_USERNAME/restauranty-frontend:latest -n restauranty
           
           # Wait for rollout to complete
-          kubectl rollout status deployment/auth-deployment -n restauranty
-          kubectl rollout status deployment/items-deployment -n restauranty
-          kubectl rollout status deployment/discounts-deployment -n restauranty
-          kubectl rollout status deployment/frontend-deployment -n restauranty
-# Updated CI/CD pipeline for microservices
+          kubectl rollout status deployment/auth -n restauranty
+          kubectl rollout status deployment/items -n restauranty
+          kubectl rollout status deployment/discounts -n restauranty
+          kubectl rollout status deployment/frontend -n restauranty
