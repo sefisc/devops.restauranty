@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - main
 
 env:
-  AWS_REGION: us-west-2
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
@@ -16,70 +15,54 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      # Configure AWS CLI
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      # Set up DockerHub login
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
+        run: echo $DOCKERHUB_TOKEN | docker login -u $DOCKERHUB_USERNAME --password-stdin
 
-      # Build & push auth service image
-      - name: Build and push auth service Docker image
+      # -----------------------------
+      # Build & push backend services
+      # -----------------------------
+      - name: Build and push auth service
         run: |
           docker build -t $DOCKERHUB_USERNAME/restauranty-auth:latest ./backend/auth
           docker push $DOCKERHUB_USERNAME/restauranty-auth:latest
 
-      # Build & push items service image
-      - name: Build and push items service Docker image
-        run: |
-          docker build -t $DOCKERHUB_USERNAME/restauranty-items:latest ./backend/items
-          docker push $DOCKERHUB_USERNAME/restauranty-items:latest
-
-      # Build & push discounts service image
-      - name: Build and push discounts service Docker image
+      - name: Build and push discounts service
         run: |
           docker build -t $DOCKERHUB_USERNAME/restauranty-discounts:latest ./backend/discounts
           docker push $DOCKERHUB_USERNAME/restauranty-discounts:latest
 
-      # Build & push frontend image
-      - name: Build and push frontend Docker image
+      - name: Build and push items service
         run: |
-          docker build \
-            --build-arg REACT_APP_API_URL=${{ env.REACT_APP_API_URL }} \
-            -t $DOCKERHUB_USERNAME/restauranty-frontend:latest ./client
+          docker build -t $DOCKERHUB_USERNAME/restauranty-items:latest ./backend/items
+          docker push $DOCKERHUB_USERNAME/restauranty-items:latest
+
+      # -----------------------------
+      # Build & push frontend
+      # -----------------------------
+      - name: Build and push frontend
+        run: |
+          docker build -t $DOCKERHUB_USERNAME/restauranty-frontend:latest ./client
           docker push $DOCKERHUB_USERNAME/restauranty-frontend:latest
 
-      # Set up kubeconfig from base64 secret
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-
+      # -----------------------------
       # Deploy to EKS
-      - name: Deploy to EKS
+      # -----------------------------
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.31.0'
+
+      - name: Configure kubeconfig
         run: |
-          # Update image tags for backend services
-          kubectl set image deployment/auth auth=$DOCKERHUB_USERNAME/restauranty-auth:latest -n restauranty
-          kubectl set image deployment/items items=$DOCKERHUB_USERNAME/restauranty-items:latest -n restauranty
-          kubectl set image deployment/discounts discounts=$DOCKERHUB_USERNAME/restauranty-discounts:latest -n restauranty
-          
-          # Update frontend initContainer image (copy-static is the initContainer name)
-          kubectl patch deployment frontend -n restauranty -p '{"spec":{"template":{"spec":{"initContainers":[{"name":"copy-static","image":"'$DOCKERHUB_USERNAME'/restauranty-frontend:latest"}]}}}}'
-          
-          # Wait for rollout to complete
-          kubectl rollout status deployment/auth -n restauranty
-          kubectl rollout status deployment/items -n restauranty
-          kubectl rollout status deployment/discounts -n restauranty
-          kubectl rollout status deployment/frontend -n restauranty
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/

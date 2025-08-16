@@ -48,3 +48,22 @@ logs/
 dist/
 build/
 kubeconfig_base64.txt
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+
+# Monitoring
+k8s/monitoring/auth
+
+# Logs
+*.log
+/tmp/
+
+# IDE
+.vscode/
+.idea/
+

@@ -1,0 +1,32 @@
+# monitoring/values-kube-prometheus.yaml
+
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    retention: 15d
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+          storageClassName: gp2    # <-- add this
+
+grafana:
+  enabled: true
+  adminUser: admin
+  adminPassword: admin123
+  service:
+    type: ClusterIP   # internal only
+    port: 80
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClassName: gp2      # Persistent volume
+  ingress:
+    enabled: false            # Do NOT expose publicly
+
+prometheusOperator:
+  createCustomResource: true
+  serviceMonitorSelectorNilUsesHelmValues: false
