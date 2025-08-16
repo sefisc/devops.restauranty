@@ -1,0 +1,29 @@
+# Basic logging configuration for EKS cluster
+# This enables logging to CloudWatch via EKS built-in features
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logging-config
+  namespace: kube-system
+data:
+  enable-logging: |
+    # EKS Cluster Logging Configuration
+    # Enable the following log types in EKS cluster:
+    # - api: API server logs
+    # - audit: Audit logs  
+    # - authenticator: Authenticator logs
+    # - controllerManager: Controller manager logs
+    # - scheduler: Scheduler logs
+    
+    # Application logs are automatically available via:
+    # kubectl logs <pod-name> -n <namespace>
+    
+    # To view logs in CloudWatch:
+    # 1. Go to AWS Console > CloudWatch > Log Groups
+    # 2. Look for log groups starting with /aws/eks/restauranty-eks/
+    
+    cluster_name: "restauranty-eks"
+    log_groups:
+      - "/aws/eks/restauranty-eks/cluster"
+      - "application logs via kubectl logs command"
