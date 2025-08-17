@@ -15,26 +15,8 @@ spec:
         role: auth
         service-type: application
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node.kubernetes.io/instance-type
-                operator: In
-                values:
-                - t2.small
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: service-type
-                  operator: In
-                  values:
-                  - application
-              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        service: auth
       containers:
       - name: auth
         image: sfischer46/restauranty-auth:v1
@@ -58,12 +40,15 @@ apiVersion: v1
 kind: Service
 metadata:
   name: auth
+  labels:
+    app: auth
   namespace: restauranty
 spec:
   selector:
     app: auth
   ports:
-  - port: 3001
+  - name: http
+    port: 3001
     targetPort: 3001
     protocol: TCP
   type: ClusterIP
