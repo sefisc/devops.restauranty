@@ -1,4 +1,4 @@
-# RestauranTy - Microservices Restaurant Platform
+# Restauranty - Microservices Restaurant Platform
 
 Production-ready microservices architecture with complete DevOps automation for restaurant management.
 
