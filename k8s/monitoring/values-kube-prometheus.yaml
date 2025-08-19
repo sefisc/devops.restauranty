@@ -16,7 +16,6 @@ prometheus:
 grafana:
   enabled: true
   adminUser: admin
-  adminPassword: admin123
   service:
     type: ClusterIP   # internal only
     port: 80

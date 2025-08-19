@@ -1,8 +1,8 @@
-# Restauranty - Microservices Restaurant Platform
+# RestauranTy - Microservices Restaurant Platform
 
 Production-ready microservices architecture with complete DevOps automation for restaurant management.
 
-## Architecture
+## 1. Architecture
 
 - **Auth Service** (Port 3001) - Authentication & JWT management
 - **Discounts Service** (Port 3002) - Coupons & promotions  
@@ -10,7 +10,7 @@ Production-ready microservices architecture with complete DevOps automation for 
 - **React Client** (Port 80) - Frontend web interface (3000 in dev mode)
 - **MongoDB** (Port 27017) - Database
 
-## Prerequisites
+## 2. Prerequisites
 
 ```bash
 # Required tools
@@ -21,17 +21,16 @@ Production-ready microservices architecture with complete DevOps automation for 
 - HAProxy (for local development)
 ```
 
-## Quick Start
+## 3. Local Development
 
-### 1. Local Development
-
-**Single Command Setup:**
+### Single Command Setup:
 ```bash
-# Start all services locally
+# Start all services locally with Docker Compose
 docker-compose up --build
 ```
+**Access:** http://localhost:80 (HAProxy)
 
-**Individual Services:**
+### Individual Services:
 ```bash
 # Backend services
 cd backend/auth && npm install && npm start       # Port 3001
@@ -45,9 +44,18 @@ cd client && npm install && npm start             # Port 3000
 haproxy -f haproxy.cfg
 ```
 
-### 2. Production Deployment
+## 4. Containerization
 
-**Infrastructure (AWS EKS):**
+Each service has its own Dockerfile:
+- `backend/auth/Dockerfile` - Auth service container
+- `backend/discounts/Dockerfile` - Discounts service container
+- `backend/items/Dockerfile` - Items service container
+- `client/Dockerfile` - React frontend container
+- `docker-compose.yml` - Multi-container local development
+
+## 5. Production Deployment (Kubernetes)
+
+### Infrastructure (AWS EKS):
 ```bash
 cd terraform
 terraform init
@@ -55,16 +63,15 @@ terraform plan
 terraform apply
 ```
 
-**Connect to cluster:**
+### Connect to cluster:
 ```bash
 aws eks update-kubeconfig --region us-west-2 --name restauranty-cluster
 ```
 
-**Deploy applications:**
+### Deploy applications:
 ```bash
 # Create namespaces
 kubectl apply -f k8s/monitoring/namespace.yaml
-kubectl apply -f k8s/namespace.yaml
 
 # Deploy MongoDB
 kubectl apply -f k8s/mongo/
@@ -81,7 +88,7 @@ kubectl apply -f k8s/frontend/
 kubectl apply -f k8s/ingress/
 ```
 
-**Setup monitoring:**
+### Setup monitoring:
 ```bash
 # Install Prometheus stack
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -95,19 +102,16 @@ kubectl apply -f k8s/monitoring/servicemonitors/
 ./k8s/monitoring/import-dashboards.sh
 ```
 
-**Setup SSL certificates:**
+### Setup SSL certificates:
 ```bash
 # Install cert-manager
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.12.0/cert-manager.yaml
-
-# Apply certificate issuers
-kubectl apply -f k8s/cert-manager/
 
 # Deploy certificates (automated via CI/CD)
 # Manual deployment: LETSENCRYPT_EMAIL="your@email.com" envsubst < k8s/cert-manager/letsencrypt-prod.yaml | kubectl apply -f -
 ```
 
-### 3. CI/CD Pipeline
+## 6. CI/CD Pipeline
 
 Pipeline automatically triggers on push to `main` branch:
 
@@ -130,6 +134,12 @@ KUBECONFIG_DATA
 LETSENCRYPT_EMAIL
 ```
 
+## 7. Security
+
+### Environment Variables:
+```bash
+cp .env.example .env
+```
 
 **Required variables:**
 ```
@@ -138,15 +148,34 @@ JWT_SECRET=your-jwt-secret
 PORT=3001  # (varies per service)
 ```
 
-## API Endpoints
+### Security Features:
+- **JWT Token Authentication** - Secure user sessions
+- **Access Control** - Login protection for Grafana and Prometheus
+- **Environment Variable Management** - No hardcoded secrets
+- **SSL/TLS Certificates** - Automated Let's Encrypt certificates
+- **Kubernetes Secrets** - Secure secret storage in cluster
 
-| Service | Base URL | Routes |
-|---------|----------|--------|
-| Auth | `/api/auth` | `/login`, `/register`, `/verify` |
-| Items | `/api/items` | `/`, `/:id`, `/search` |
-| Discounts | `/api/discounts` | `/`, `/:id`, `/apply` |
+## 8. API Endpoints
 
-## Monitoring & Observability
+**Note:** API endpoints are designed for programmatic access (called by the React frontend), not direct browser access.
+
+| Service | Base URL | Example Routes |
+|---------|----------|----------------|
+| Auth | `/api/auth` | `/login` (POST), `/register` (POST), `/verify` (GET) |
+| Items | `/api/items` | `/` (GET), `/:id` (GET), `/search` (POST) |
+| Discounts | `/api/discounts` | `/` (GET), `/:id` (GET), `/apply` (POST) |
+
+### How They Actually Work:
+
+1. **User visits** `https://sebsrestaurant.diogohack.shop/`
+2. **React app loads** (requires JavaScript enabled)
+3. **React app makes API calls** internally:
+   - Login form → `POST /api/auth/login`
+   - Menu loading → `GET /api/items`
+   - Coupon application → `POST /api/discounts/apply`
+
+
+## 9. Monitoring & Observability
 
 **Access Grafana:**
 ```bash
@@ -162,16 +191,17 @@ kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 909
 
 **View logs:**
 ```bash
-# Service logs
+# Application logs
 kubectl logs -f deployment/auth -n restauranty
 kubectl logs -f deployment/discounts -n restauranty  
 kubectl logs -f deployment/items -n restauranty
 
-# Aggregated logs (ELK stack)
-kubectl port-forward svc/kibana -n logging 5601:5601
+# Infrastructure logs (AWS CloudWatch)
+# Go to AWS Console > CloudWatch > Log Groups > /aws/eks/restauranty-cluster/
+```
 ```
 
-## Troubleshooting
+## 10. Troubleshooting
 
 **Check service status:**
 ```bash
@@ -192,7 +222,7 @@ kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 909
 curl http://localhost:9090/api/v1/targets
 ```
 
-## Development Workflow
+## 11. Development Workflow
 
 1. **Local Development**: Use `docker-compose up` or individual `npm start`
 2. **Testing**: Run tests with `npm test` in each service directory
@@ -200,7 +230,7 @@ curl http://localhost:9090/api/v1/targets
 4. **Deploy**: Push to `main` branch triggers auto-deployment
 5. **Monitor**: Check Grafana dashboards and Prometheus metrics
 
-## File Structure
+## 12. File Structure
 
 ```
 devops.restauranty/
@@ -226,8 +256,7 @@ devops.restauranty/
 └── README.md          # This file
 ```
 
-
-## Production URLs
+## 13. Production URLs
 
 - **Application**: https://sebsrestaurant.diogohack.shop/
 - **Grafana**: https://grafana.sebsrestaurant.diogohack.shop/
