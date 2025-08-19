@@ -199,11 +199,8 @@ kubectl logs -f deployment/items -n restauranty
 # Infrastructure logs (AWS CloudWatch)
 # Go to AWS Console > CloudWatch > Log Groups > /aws/eks/restauranty-cluster/
 ```
-```
-
 
 ## 10. Troubleshooting
-
 **Check service status:**
 ```bash
 kubectl get pods -n restauranty -o wide
