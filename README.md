@@ -129,19 +129,7 @@ DOCKERHUB_TOKEN
 KUBECONFIG_DATA
 LETSENCRYPT_EMAIL
 ```
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY  
-DOCKERHUB_USERNAME
-DOCKERHUB_TOKEN
-KUBECONFIG_DATA
-```
 
-## Environment Variables
-
-Copy and configure:
-```bash
-cp .env.example .env
-```
 
 **Required variables:**
 ```
@@ -221,25 +209,23 @@ devops.restauranty/
 │   ├── discounts/       # Discounts service  
 │   └── items/           # Items service
 ├── client/              # React frontend
-├── docs/                # Documentation
-│   ├── CERT_DEPLOYMENT.md
-│   ├── DELIVERABLES_SUMMARY.md
-│   ├── FINAL.md
-│   └── MONITORING_AND_LOGGING.md
 ├── k8s/                 # Kubernetes manifests
 │   ├── auth/           # Auth deployment
 │   ├── discounts/      # Discounts deployment
 │   ├── items/          # Items deployment
 │   ├── frontend/       # Frontend deployment
 │   ├── ingress/        # Ingress controller
-│   ├── monitoring/     # Prometheus/Grafana
-│   └── cert-manager/   # SSL certificates
+│   ├── monitoring/     # Prometheus/Grafana setup
+│   ├── cert-manager/   # SSL certificates
+│   └── logging/        # ELK stack
 ├── terraform/          # AWS EKS infrastructure
+├── ansible/            # Ansible playbooks
 ├── .github/workflows/  # CI/CD pipeline
 ├── docker-compose.yml  # Local development
 ├── haproxy.cfg        # Local load balancing
 └── README.md          # This file
 ```
+
 
 ## Production URLs
 
