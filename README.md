@@ -201,6 +201,7 @@ kubectl logs -f deployment/items -n restauranty
 ```
 ```
 
+
 ## 10. Troubleshooting
 
 **Check service status:**
