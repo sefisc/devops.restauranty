@@ -75,15 +75,19 @@ jobs:
         run: |
           export KUBECONFIG=$PWD/kubeconfig
           
-          # Deploy regular manifests (non-cert-manager)
+          # Deploy regular manifests (exclude Helm values files)
           kubectl apply -f k8s/auth/
           kubectl apply -f k8s/discounts/
           kubectl apply -f k8s/items/
           kubectl apply -f k8s/frontend/
           kubectl apply -f k8s/mongo/
           kubectl apply -f k8s/ingress/
-          kubectl apply -f k8s/monitoring/
           kubectl apply -f k8s/logging/
+          
+          # Deploy monitoring namespace and ServiceMonitors only
+          kubectl apply -f k8s/monitoring/namespace.yaml
+          kubectl apply -f k8s/monitoring/servicemonitors/
+          kubectl apply -f k8s/monitoring/monitoring-ingress.yaml
 
       - name: Deploy cert-manager with environment substitution
         env:
