@@ -14,15 +14,8 @@ spec:
         app: mongodb
         role: mongo
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node.kubernetes.io/instance-type
-                operator: In
-                values:
-                - t2.large
+      nodeSelector:
+        service: mongodb
       containers:
       - name: mongodb
         image: mongo:latest
@@ -44,7 +37,8 @@ spec:
           name: mongo-storage
       volumes:
       - name: mongo-storage
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: mongo-pvc
 ---
 apiVersion: v1
 kind: Service

@@ -67,3 +67,5 @@ k8s/monitoring/auth
 .vscode/
 .idea/
 
+k8s/cert-manager/cluster-issuer-temp.yaml
+*.backup

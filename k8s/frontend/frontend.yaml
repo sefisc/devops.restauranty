@@ -15,43 +15,23 @@ spec:
         role: frontend
         service-type: application
     spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: node.kubernetes.io/instance-type
-                operator: In
-                values:
-                - t2.small
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: service-type
-                  operator: In
-                  values:
-                  - application
-              topologyKey: kubernetes.io/hostname
+      nodeSelector:
+        service: frontend
       initContainers:
-      - name: fix-frontend-urls
-        image: busybox:latest
+      - name: copy-and-fix-frontend
+        image: sfischer46/restauranty-frontend:v1
         command: 
         - sh
         - -c
         - |
           echo "Copying files from frontend image..."
-          cp -r /html-source/* /html-dest/
+          cp -r /usr/share/nginx/html/* /html-dest/
           echo "Fixing JavaScript localhost URLs..."
           find /html-dest -name "*.js" -exec sed -i 's|http://localhost:80||g' {} +
           echo "Fix completed successfully!"
         volumeMounts:
         - name: html-shared
           mountPath: /html-dest
-        - name: html-source
-          mountPath: /html-source
       containers:
       - name: nginx
         image: nginx:alpine
@@ -60,16 +40,8 @@ spec:
         volumeMounts:
         - name: html-shared
           mountPath: /usr/share/nginx/html
-      - name: html-provider
-        image: sfischer46/restauranty-frontend:v1
-        command: ['sh', '-c', 'cp -r /usr/share/nginx/html/* /html-source/ && sleep infinity']
-        volumeMounts:
-        - name: html-source
-          mountPath: /html-source
       volumes:
       - name: html-shared
-        emptyDir: {}
-      - name: html-source
         emptyDir: {}
 ---
 apiVersion: v1

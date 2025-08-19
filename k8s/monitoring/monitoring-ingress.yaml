@@ -12,8 +12,17 @@ metadata:
     # Rate Limiting
     nginx.ingress.kubernetes.io/rate-limit-requests-per-second: "10"
     nginx.ingress.kubernetes.io/rate-limit-connections: "5"
+    
+    # TLS Configuration
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - grafana.sebsrestaurant.diogohack.shop
+    - prometheus.sebsrestaurant.diogohack.shop
+    secretName: monitoring-tls
   rules:
   - host: grafana.sebsrestaurant.diogohack.shop
     http:
