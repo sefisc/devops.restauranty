@@ -92,7 +92,7 @@ helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring
 kubectl apply -f k8s/monitoring/servicemonitors/
 
 # Import Grafana dashboards
-./scripts/import-dashboards.sh
+./k8s/monitoring/import-dashboards.sh
 ```
 
 **Setup SSL certificates:**
@@ -103,8 +103,8 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/
 # Apply certificate issuers
 kubectl apply -f k8s/cert-manager/
 
-# Deploy certificates
-./scripts/deploy-certs.sh
+# Deploy certificates (automated via CI/CD)
+# Manual deployment: LETSENCRYPT_EMAIL="your@email.com" envsubst < k8s/cert-manager/letsencrypt-prod.yaml | kubectl apply -f -
 ```
 
 ### 3. CI/CD Pipeline
@@ -121,6 +121,13 @@ Pipeline automatically triggers on push to `main` branch:
 ```
 
 **Required GitHub Secrets:**
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY  
+DOCKERHUB_USERNAME
+DOCKERHUB_TOKEN
+KUBECONFIG_DATA
+LETSENCRYPT_EMAIL
 ```
 AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY  
@@ -219,9 +226,6 @@ devops.restauranty/
 │   ├── DELIVERABLES_SUMMARY.md
 │   ├── FINAL.md
 │   └── MONITORING_AND_LOGGING.md
-├── scripts/             # Deployment scripts
-│   ├── deploy-certs.sh
-│   └── import-dashboards.sh
 ├── k8s/                 # Kubernetes manifests
 │   ├── auth/           # Auth deployment
 │   ├── discounts/      # Discounts deployment

@@ -9,6 +9,7 @@ env:
   DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
   REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+  LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
 
 jobs:
   build-and-deploy:
@@ -70,7 +71,27 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
           export KUBECONFIG=$PWD/kubeconfig
 
-      - name: Apply Kubernetes manifests
+      - name: Deploy applications
         run: |
           export KUBECONFIG=$PWD/kubeconfig
-          kubectl apply -f k8s/
+          
+          # Deploy regular manifests (non-cert-manager)
+          kubectl apply -f k8s/auth/
+          kubectl apply -f k8s/discounts/
+          kubectl apply -f k8s/items/
+          kubectl apply -f k8s/frontend/
+          kubectl apply -f k8s/mongo/
+          kubectl apply -f k8s/ingress/
+          kubectl apply -f k8s/monitoring/
+          kubectl apply -f k8s/logging/
+
+      - name: Deploy cert-manager with environment substitution
+        env:
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        run: |
+          export KUBECONFIG=$PWD/kubeconfig
+          
+          # Apply cert-manager manifests with environment substitution
+          envsubst < k8s/cert-manager/cluster-issuer.yaml | kubectl apply -f -
+          envsubst < k8s/cert-manager/letsencrypt-prod.yaml | kubectl apply -f -
+          envsubst < k8s/cert-manager/letsencrypt-staging.yaml | kubectl apply -f -
